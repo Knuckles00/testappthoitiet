@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Weather Assistant - Tra cứu thời tiết với Bot AI</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: system-ui, 'Segoe UI', 'Poppins', -apple-system, BlinkMacSystemFont, 'Roboto', sans-serif;
+        }
+
+        body {
+            min-height: 100vh;
+            background: linear-gradient(145deg, #0a2f44 0%, #0a1f2c 100%);
+            padding: 24px 20px;
+        }
+
+        /* Container chính - 2 cột */
+        .app-grid {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 28px;
+            align-items: start;
+        }
+
+        /* Card chung cho mỗi cột */
+        .card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(12px);
+            border-radius: 40px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            transition: transform 0.2s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-4px);
+        }
+
+        .card-header {
+            padding: 20px 26px;
+            background: rgba(0, 0, 0, 0.3);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+        }
+
+        .card-header h2 {
+            font-size: 1.7rem;
+            font-weight: 600;
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .card-header p {
+            color: #cbd5e6;
+            font-size: 0.85rem;
+            margin-top: 6px;
+        }
+
+        .card-content {
+            padding: 24px;
+        }
+
+        /* Phần thời tiết */
+        .search-section {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 28px;
+            flex-wrap: wrap;
+        }
+
+        .search-input {
+            flex: 1;
+            padding: 14px 20px;
+            border: none;
+            border-radius: 60px;
+            font-size: 1rem;
+            background: rgba(255, 255, 255, 0.95);
+            outline: none;
+            transition: 0.2s;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+        }
+
+        .search-input:focus {
+            background: white;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+
+        .search-btn {
+            background: linear-gradient(135deg, #f39c12, #e67e22);
+            border: none;
+            padding: 0 28px;
+            border-radius: 60px;
+            font-weight: bold;
+            font-size: 1rem;
+            color: white;
+            cursor: pointer;
+            transition: 0.2s;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+        }
+
+        .search-btn:hover {
+            transform: scale(0.97);
+            background: linear-gradient(135deg, #e67e22, #d35400);
+        }
+
+        .weather-card {
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 32px;
+            padding: 20px;
+            text-align: center;
+            backdrop-filter: blur(4px);
+        }
+
+        .city-name {
+            font-size: 2rem;
+            font-weight: 700;
+            color: white;
+            word-break: break-word;
+        }
+
+        .country {
+            background: #00000066;
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 40px;
+            font-size: 0.85rem;
+            color: #f1f1f1;
+            margin: 8px 0;
+        }
+
+        .temp {
+            font-size: 4rem;
+            font-weight: 800;
+            color: #fff2cf;
+            margin: 12px 0;
+            letter-spacing: -2px;
+        }
+
+        .temp span {
+            font-size: 1.5rem;
+            font-weight: 500;
+        }
+
+        .weather-icon {
+            width: 85px;
+            height: 85px;
+            margin: 0 auto;
+            background: rgba(0,0,0,0.2);
+            border-radius: 100px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .weather-icon img {
+            width: 75px;
+            height: 75px;
+        }
+
+        .description {
+            font-size: 1.2rem;
+            font-weight: 500;
+            text-transform: capitalize;
+            color: #fef3c7;
+            margin: 10px 0 6px;
+        }
+
+        .details-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 14px;
+            margin-top: 22px;
+        }
+
+        .detail-box {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 24px;
+            padding: 10px;
+        }
+
+        .detail-label {
+            font-size: 0.7rem;
+            opacity: 0.8;
+            letter-spacing: 0.5px;
+        }
+
+        .detail-value {
+            font-weight: bold;
+            font-size: 1.2rem;
+            margin-top: 5px;
+        }
+
+        .error-message, .loading-message {
+            background: rgba(0,0,0,0.6);
+            border-radius: 28px;
+            padding: 20px;
+            text-align: center;
+            color: #ffe6cc;
+            font-weight: 500;
+        }
+
+        /* Phần Botpress Chat - iframe */
+        .botpress-container {
+            width: 100%;
+            min-height: 550px;
+            background: #f8fafc;
+            border-radius: 28px;
+            overflow: hidden;
+            box-shadow: inset 0 0 0 1px rgba(0,0,0,0.05), 0 10px 25px -5px rgba(0,0,0,0.2);
+        }
+
+        .botpress-iframe {
+            width: 100%;
+            height: 620px;
+            border: none;
+            display: block;
+        }
+
+        .footer-note {
+            text-align: center;
+            margin-top: 30px;
+            color: #9aaebf;
+            font-size: 0.7rem;
+        }
+
+        @media (max-width: 900px) {
+            .app-grid {
+                grid-template-columns: 1fr;
+                gap: 30px;
+            }
+            .botpress-iframe {
+                height: 550px;
+            }
+            .card-header h2 {
+                font-size: 1.4rem;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="app-grid">
+    
+    <!-- Cột 1: Tra cứu thời tiết -->
+    <div class="card">
+        <div class="card-header">
+            <h2>
+                <span>🌤️</span> Thời tiết toàn cầu
+            </h2>
+            <p>Nhập tên thành phố hoặc địa điểm bất kỳ</p>
+        </div>
+        <div class="card-content">
+            <div class="search-section">
+                <input type="text" id="cityInput" class="search-input" placeholder="Ví dụ: Hồ Chí Minh, Tokyo, London, New York..." autocomplete="off">
+                <button id="searchWeatherBtn" class="search-btn">🔍 Tra cứu</button>
+            </div>
+            <div id="weatherDisplay">
+                <!-- Kết quả thời tiết sẽ hiển thị ở đây -->
+                <div class="weather-card" style="background: rgba(255,255,240,0.1);">
+                    <div style="padding: 20px; color: #fff3cf;">✨ Nhập địa điểm và nhấn "Tra cứu" để xem thời tiết</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cột 2: Chatbot AI từ Botpress (tích hợp link) -->
+    <div class="card">
+        <div class="card-header">
+            <h2>
+                <span>🤖</span> Trợ lý AI thông minh
+            </h2>
+            <p>Hỏi đáp, hỗ trợ và tư vấn</p>
+        </div>
+        <div class="card-content" style="padding: 0 0 8px 0;">
+            <div class="botpress-container">
+                <iframe 
+                    src="https://cdn.botpress.cloud/webchat/v3.6/shareable.html?configUrl=https://files.bpcontent.cloud/2026/04/14/11/20260414115841-UK2K3FIF.json" 
+                    class="botpress-iframe"
+                    title="Botpress AI Chatbot"
+                    allow="microphone; clipboard-read; clipboard-write"
+                    loading="lazy">
+                </iframe>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="footer-note">
+    🌍 Dữ liệu thời tiết được cập nhật từ OpenWeatherMap | 🤖 Chatbot được hỗ trợ bởi Botpress
+</div>
+
+<script>
+    // ==================== CẤU HÌNH API THỜI TIẾT ====================
+    // ⚠️ QUAN TRỌNG: Bạn cần thay thế YOUR_API_KEY_HERE bằng API Key thật từ OpenWeatherMap
+    const WEATHER_API_KEY = '4caf3131266e1f62cb36ad8d2d7cb367';   // 👈 NHẬP API KEY CỦA BẠN VÀO ĐÂY
+    const BASE_URL = 'https://api.openweathermap.org/data/2.5/weather';
+    
+    // DOM elements
+    const cityInput = document.getElementById('cityInput');
+    const searchBtn = document.getElementById('searchWeatherBtn');
+    const weatherDisplay = document.getElementById('weatherDisplay');
+
+    // Helper: XSS protection
+    function escapeHtml(str) {
+        if (!str) return '';
+        return str.replace(/[&<>]/g, function(m) {
+            if (m === '&') return '&amp;';
+            if (m === '<') return '&lt;';
+            if (m === '>') return '&gt;';
+            return m;
+        }).replace(/[\uD800-\uDBFF][\uDC00-\uDFFF]/g, function(c) {
+            return c;
+        });
+    }
+
+    // Lấy icon từ OpenWeatherMap
+    function getWeatherIconUrl(iconCode) {
+        return `https://openweathermap.org/img/wn/${iconCode}@2x.png`;
+    }
+
+    // Chuyển đổi nhiệt độ Kelvin -> °C và °F
+    function formatTemperature(kelvin) {
+        const celsius = (kelvin - 273.15).toFixed(1);
+        const fahrenheit = ((kelvin - 273.15) * 9/5 + 32).toFixed(1);
+        return {
+            celsius: `${celsius}°C`,
+            fahrenheit: `${fahrenheit}°F`
+        };
+    }
+
+    // Hiển thị trạng thái loading
+    function showLoading() {
+        weatherDisplay.innerHTML = `
+            <div class="loading-message">
+                ⏳ Đang tra cứu thời tiết cho "<strong>${escapeHtml(cityInput.value.trim()) || 'địa điểm'}</strong>" ...
+            </div>
+        `;
+    }
+
+    // Hiển thị lỗi
+    function showError(message, suggestions = []) {
+        let errorHtml = `<div class="error-message">⚠️ ${escapeHtml(message)}</div>`;
+        if (suggestions.length > 0) {
+            errorHtml += `<div style="margin-top: 14px; text-align: center;">
+                <div style="color: #ffdd99; font-size: 0.8rem; margin-bottom: 6px;">💡 Gợi ý:</div>
+                <div style="display: flex; flex-wrap: wrap; gap: 8px; justify-content: center;">`;
+            suggestions.forEach(s => {
+                errorHtml += `<span style="background: #2c3e50; padding: 4px 12px; border-radius: 30px; cursor: pointer; font-size: 0.8rem;" 
+                                onclick="setAndSearch('${s.replace(/'/g, "\\'")}')">${escapeHtml(s)}</span>`;
+            });
+            errorHtml += `</div></div>`;
+        }
+        weatherDisplay.innerHTML = errorHtml;
+    }
+
+    // Hàm hỗ trợ gợi ý click
+    window.setAndSearch = function(city) {
+        cityInput.value = city;
+        fetchWeather(city);
+    };
+
+    // Hiển thị dữ liệu thời tiết
+    function renderWeather(data) {
+        const cityName = data.name;
+        const country = data.sys.country;
+        const tempKelvin = data.main.temp;
+        const feelsLikeKelvin = data.main.feels_like;
+        const humidity = data.main.humidity;
+        const pressure = data.main.pressure;
+        const windSpeed = data.wind.speed;
+        const weatherDesc = data.weather[0].description;
+        const iconCode = data.weather[0].icon;
+        const weatherMain = data.weather[0].main;
+
+        const tempObj = formatTemperature(tempKelvin);
+        const feelsLikeObj = formatTemperature(feelsLikeKelvin);
+        
+        const html = `
+            <div class="weather-card">
+                <div class="city-name">${escapeHtml(cityName)}</div>
+                <div class="country">${escapeHtml(country)} 🌍</div>
+                <div class="temp">
+                    ${tempObj.celsius} <span>| ${tempObj.fahrenheit}</span>
+                </div>
+                <div class="weather-icon">
+                    <img src="${getWeatherIconUrl(iconCode)}" alt="${escapeHtml(weatherDesc)}" loading="lazy">
+                </div>
+                <div class="description">
+                    ${escapeHtml(weatherDesc)} · ${escapeHtml(weatherMain)}
+                </div>
+                <div class="details-grid">
+                    <div class="detail-box">
+                        <div class="detail-label">🌡️ Cảm giác như</div>
+                        <div class="detail-value">${feelsLikeObj.celsius}</div>
+                    </div>
+                    <div class="detail-box">
+                        <div class="detail-label">💧 Độ ẩm</div>
+                        <div class="detail-value">${humidity}%</div>
+                    </div>
+                    <div class="detail-box">
+                        <div class="detail-label">🌬️ Tốc độ gió</div>
+                        <div class="detail-value">${(windSpeed * 3.6).toFixed(1)} km/h</div>
+                    </div>
+                    <div class="detail-box">
+                        <div class="detail-label">📊 Áp suất</div>
+                        <div class="detail-value">${pressure} hPa</div>
+                    </div>
+                </div>
+            </div>
+        `;
+        weatherDisplay.innerHTML = html;
+    }
+
+    // Hàm gọi API thời tiết (có xử lý tên địa danh Việt Nam)
+    async function fetchWeather(location) {
+        if (!location || location.trim() === '') {
+            showError('Vui lòng nhập tên thành phố hoặc địa điểm.');
+            return;
+        }
+
+        showLoading();
+
+        // Ánh xạ nhanh cho một số địa danh Việt Nam phổ biến
+        const locationMap = {
+            'hồ chí minh': 'Ho Chi Minh City',
+            'hồ chí minh city': 'Ho Chi Minh City',
+            'ho chi minh': 'Ho Chi Minh City',
+            'saigon': 'Ho Chi Minh City',
+            'sài gòn': 'Ho Chi Minh City',
+            'hà nội': 'Hanoi',
+            'ha noi': 'Hanoi',
+            'đà nẵng': 'Da Nang',
+            'da nang': 'Da Nang',
+            'nha trang': 'Nha Trang',
+            'cần thơ': 'Can Tho'
+        };
+        
+        let queryLocation = location.trim();
+        const lowerLoc = queryLocation.toLowerCase();
+        if (locationMap[lowerLoc]) {
+            queryLocation = locationMap[lowerLoc];
+        }
+
+        try {
+            const url = `${BASE_URL}?q=${encodeURIComponent(queryLocation)}&appid=${WEATHER_API_KEY}`;
+            const response = await fetch(url);
+            
+            if (!response.ok) {
+                if (response.status === 404) {
+                    // Gợi ý các thành phố lớn
+                    showError(`Không tìm thấy địa điểm "${escapeHtml(location)}". Hãy thử tên tiếng Anh hoặc tên chính xác.`, 
+                              ['Hanoi', 'Ho Chi Minh City', 'Da Nang', 'London', 'Tokyo', 'Paris']);
+                } else if (response.status === 401) {
+                    showError('API Key không hợp lệ. Vui lòng kiểm tra lại khóa API từ OpenWeatherMap.');
+                } else {
+                    showError(`Lỗi kết nối (${response.status}). Thử lại sau.`);
+                }
+                return;
+            }
+            
+            const data = await response.json();
+            renderWeather(data);
+        } catch (err) {
+            console.error(err);
+            showError('Không thể lấy dữ liệu thời tiết. Kiểm tra kết nối mạng.');
+        }
+    }
+
+    // Xử lý sự kiện
+    searchBtn.addEventListener('click', () => fetchWeather(cityInput.value));
+    cityInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            fetchWeather(cityInput.value);
+        }
+    });
+
+    // Kiểm tra API key và hiển thị thông báo nếu chưa cấu hình
+    if (WEATHER_API_KEY === 'YOUR_API_KEY_HERE') {
+        weatherDisplay.innerHTML = `
+            <div class="error-message">
+                🔑 Chưa cấu hình API Key thời tiết.<br>
+                Vui lòng đăng ký miễn phí tại <strong style="color:#ffb347;">OpenWeatherMap</strong> và thay thế <code>YOUR_API_KEY_HERE</code> trong code.
+            </div>
+        `;
+    } else {
+        // Gợi ý demo ban đầu
+        weatherDisplay.innerHTML = `
+            <div class="weather-card" style="background: rgba(255,255,240,0.1);">
+                <div style="padding: 20px; color: #fff3cf;">🌎 Sẵn sàng! Nhập tên thành phố và nhấn "Tra cứu".<br>Ví dụ: "Ho Chi Minh City", "Hanoi", "Paris"</div>
+            </div>
+        `;
+    }
+</script>
+</body>
+</html>
